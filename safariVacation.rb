@@ -1,96 +1,72 @@
-# require 'pg'
-# require 'active_record'
-
-# ActiveRecord::Base.logger = Logger.new(STDOUT)
-# ActiveRecord::Base.establish_connection(
-#   adapter: "postgresql",
-#   database: "safari_vacation"
-# )
-
-# class SeenAnimal < ActiveRecord::Base
-# end
-
-# def json_print data
-#   puts JSON.pretty_generate(data.as_json)
-# end
-
-# json_print SeenAnimal.all
-
-# # number = gets.chomp
-# # text = gets.chomp
-# # #{number}, #{text}
-# SeenAnimal.find(9).update(count_of_times_seen: "25", location_of_last_seen: "lake")
-
-# json_print SeenAnimal.where(location_of_last_seen: "jungle")
-
-# SeenAnimal.where("location_of_last_seen = ?", "desert").delete_all
-
-# json_print SeenAnimal.all
-
-# json_print SeenAnimal.sum("count_of_times_seen")
-
-# json_print SeenAnimal.where(species: "lion").or(SeenAnimal.where(species: "tiger")).or(SeenAnimal.where(species: "bear")).sum("count_of_times_seen")
-
 
 require 'sinatra'
-require 'sinatra/reloader' if development?
 require 'sinatra/json'
+require 'sinatra/reloader' if development?
 require 'active_record'
+require 'rack/cors'
 
+# Allow anyone to access our API via a browser
+use Rack::Cors do |config|
+  config.allow do |allow|
+    allow.origins '*'
+    allow.resource '*'
+  end
+end
+
+# Connects ActiveRecord to our safari database
 ActiveRecord::Base.establish_connection(
   adapter: "postgresql",
   database: "safari_vacation"
 )
 
+# Make a class that allows us to work with the database.
 class SeenAnimal < ActiveRecord::Base
 end
 
-
-# get all animals
-get '/Animals' do 
-  json  SeenAnimal.all.order(:id)
+# Create `GET /Animals` Endpoint that returns all animals you have seen
+get '/Animals' do
+  json SeenAnimal.all
 end
 
-
-# search one animal
-get '/Search/:species' do
-  json   SeenAnimal.where(species: params["species"])
+# Create `GET /Search?species=lion` that returns all animals where the species name contains the species parameter
+get '/Search' do
+  json SeenAnimal.where('species LIKE ?', "%#{params["species"]}%")
 end
 
-
-# adds one animal to database
+# Create a `POST /Animal` endpoints that adds a animal to the database. This should take a JSON body
+# JSON body looks like:
+# {
+#    "seen_animal": {
+#      "species": "Duck",
+#      "count_of_times_seen": 10,
+#      "location_of_last_seen": "Kitchen"
+#    }
+# }
 post '/Animal' do
+  animal_json_object = JSON.parse(request.body.read)
 
-  data = JSON.parse(request.body.read)
+  animal_active_record_object = SeenAnimal.create(animal_json_object["seen_animal"])
 
-  animal_params = data["animal"]
-
-  new_animal = SeenAnimal.create(animal_params)
-
-  json animal: new_animal
+  json animal_active_record_object
 end
 
-# gets all animals in a certain location
+# Create a `GET /Animal/{location}` that returns animals of only that location
 get '/Animal/:location' do
-  json   SeenAnimal.where(location_of_last_seen: params["location"])
+  json SeenAnimal.where(location_of_last_seen: params["location"])
 end
 
+# Create a `PUT /Animal/{id}` endpoint that adds 1 to the count of times seen for that animal
+put '/Animal/:id' do
+  SeenAnimal.where(id: params["id"]).update_all("count_of_times_seen = count_of_times_seen + 1")
 
-# updates the animal seen by 1, tough one
-put '/Animal/:animal' do
-  data = JSON.parse(request.body.read)
-
-  animal_params = data["animal"]
-
-
+  json SeenAnimal.find(params["id"])
 end
 
+# Create a `DELETE /Animal/{id}` endpoint that deletes that animal id from the database
+delete '/Animal/:id' do
+  found_animal = SeenAnimal.find(params["id"])
 
+  found_animal.destroy
 
-# deletes one animal from database
-delete '/delete/:species' do 
-  json animal: SeenAnimal.where(species: params["species"]).destroy
+  json found_animal
 end
-
-
-
