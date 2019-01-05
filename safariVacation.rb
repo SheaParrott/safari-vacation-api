@@ -70,3 +70,27 @@ delete '/Animal/:id' do
 
   json found_animal
 end
+# # Create a `DELETE /Animal/{location}` 
+# delete '/Animal/:location' do
+#   json SeenAnimal.where(location_of_last_seen: params["location"]).destroy
+# end
+
+
+# # Delete animals from the table by location
+# delete '/Animal/:location' do
+#   deleted_animal = SeenAnimal.where(location_of_last_seen: params["location"])
+#   deleted_animal.destroy
+#   json animals: deleted_animal
+# end
+
+# Add the count of times seen
+get '/Count' do
+  json total_count_of_times_seen: SeenAnimal.sum("count_of_times_seen")
+end
+
+# # Add the count of times seen for Lion, Tiger, Bear
+get '/Count/LTB' do
+  json total_count_of_times_seen_LTB: SeenAnimal.where(species: "lion").or(SeenAnimal.where(species: "tiger")
+  .or(SeenAnimal.where(species: "bear"))).sum("count_of_times_seen")
+  
+end
