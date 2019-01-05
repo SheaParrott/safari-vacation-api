@@ -19,9 +19,14 @@ ActiveRecord::Base.establish_connection(
   database: "safari_vacation"
 )
 
+
 # Make a class that allows us to work with the database.
 class SeenAnimal < ActiveRecord::Base
 end
+
+# need to add guard claus where if rattlesnake and bobcat exists then dont create new species
+# SeenAnimal.create(species: "Rattlesnake", count_of_times_seen: 5, location_of_last_seen: "Desert")
+# SeenAnimal.create(species: "Bobcat", count_of_times_seen: 11, location_of_last_seen: "Desert")
 
 # Create `GET /Animals` Endpoint that returns all animals you have seen
 get '/Animals' do
@@ -70,18 +75,12 @@ delete '/Animal/:id' do
 
   json found_animal
 end
+
 # # Create a `DELETE /Animal/{location}` 
-# delete '/Animal/:location' do
-#   json SeenAnimal.where(location_of_last_seen: params["location"]).destroy
-# end
-
-
-# # Delete animals from the table by location
-# delete '/Animal/:location' do
-#   deleted_animal = SeenAnimal.where(location_of_last_seen: params["location"])
-#   deleted_animal.destroy
-#   json animals: deleted_animal
-# end
+delete '/Animals/:location' do
+  deleted_animal = SeenAnimal.where(location_of_last_seen: params["location"]).delete_all
+  json animals: deleted_animal
+end
 
 # Add the count of times seen
 get '/Count' do
